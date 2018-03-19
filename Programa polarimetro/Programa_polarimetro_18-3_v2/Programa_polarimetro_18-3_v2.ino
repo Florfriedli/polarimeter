@@ -9,10 +9,14 @@
 //CONFIGURACIÓN DEL LCD
 LiquidCrystal_I2C lcd(0x3F, 16, 2); //Ubicación de la memoria en donde esta el I2C
 
-//DEFINICIÓN DE PINES  Se definen los pines en donde van a estar los pulsadores
+//CONFIGURACIÓN DEL SERVOMOTOR
+
+//DEFINICIÓN DE PINES 
 const int pulsador1 = 5; //Pulsador para subir
 const int pulsador2 = 6; //Pulsador para bajar
 const int pulsador3 = 7; //Pulsador para dar OK
+const int ledPin = 8; //Pin para el LED de láser encendido 
+
 
 //BANDERAS
 int flag_subir = 0; //Se definene las banderas para ver el estado del pulsador
@@ -20,11 +24,16 @@ int flag_bajar = 0;
 int flag_ok = 0;
 
 //DEFINICIÓN DE VARIABLES
-int pulsador1_anterior = 0;
+int pulsador1_anterior = 0; //Variable para verificar el estado de los pulsadores
 int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
-int estado_pantalla = 0;
-String sustancia;
+int estado_pantalla = 0; //variable que determina la pantalla a usarse
+
+                           // arreglo (vector) para poder sacar el promedio
+
+                       //angulo de rotación
+
+String sustancia; //Variable para guardar el nombre de la sustancia seleccionada
 
 
 void setup() 
@@ -43,7 +52,12 @@ void setup()
   pinMode (pulsador1, INPUT);  //declaro como entradas los pines
   pinMode (pulsador2, INPUT);
   pinMode (pulsador3, INPUT);
- // estado_pantalla =0;
+
+  //Definicnión del luces
+  pinMode (ledPin , OUTPUT);
+
+  //Definicipon del servomotor
+  
 
 }
 
@@ -229,7 +243,12 @@ void loop()
     lcd.print ("Procesando ...");
     lcd.setCursor (4,1);
     lcd.print ("Espere");
+
+    //Enciendo led rojo 
+    digitalWrite (ledPin,HIGH);
     delay (3000); //para que pase a la otra pantalla pero que esta se vea
+    digitalWrite (ledPin, LOW);
+    
     /*SACAR DELAY Y PONER FUNCIÓN SENSADO QUE HACE LO SIGUIENTE
      * Enciendo el LED
      * Enciendo el laser
