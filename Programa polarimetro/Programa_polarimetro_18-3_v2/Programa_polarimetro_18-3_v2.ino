@@ -56,7 +56,7 @@ void loop()
     lcd.setCursor (3,0);
     lcd.print ("Bienvenido");
     lcd.setCursor (0,1);
-    lcd.print ("FLEU Polarimeter");
+    lcd.print ("FLEU Polarimetro");
     
     delay (3000);
     estado_pantalla = 1;
@@ -67,7 +67,7 @@ void loop()
   {
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
     lcd.setCursor (0,0);
-    lcd.print ("FLEU Polarimeter");
+    lcd.print ("FLEU Polarimetro");
     lcd.setCursor (0,1);
     lcd.print ("Comenzar    OK");
     //verifico pulsador presionado
