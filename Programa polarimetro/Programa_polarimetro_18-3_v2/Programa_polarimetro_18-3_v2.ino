@@ -7,7 +7,7 @@
 //Cable marron --> GND
 //Cable naranja --> pin 
 
-#include <TimerOne.h> //Libreria para poder interrumpir por Timer1
+//#include <TimerOne.h> //Libreria para poder interrumpir por Timer1
 #include <Wire.h>     //Declaración de libreria para usar modulo I2C
 #include <LiquidCrystal_I2C.h>  //Declaracion de libreria para LCD
 #include <Servo.h> //Declaración de libreria para el servomotor
@@ -24,6 +24,7 @@ const int pulsador2 = 7; //Pulsador para bajar
 const int pulsador3 = 8; //Pulsador para dar OK
 const int pinServo = 9; //Pin de PWM al que se conecta el Servo
 const int ledPin = 13; //Pin para el LED de láser encendido 
+const int buzzerPin = 5; // Pin para el buzzer
 
 
 //BANDERAS
@@ -36,14 +37,14 @@ int pulsador1_anterior = 0; //Variable para verificar el estado de los pulsadore
 int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
-int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
-//int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
+float angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
+int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
 
-//const int num_lecturas =10; // van a ser la cantidad de lecturas por cada angulo para sacar el promedio, me va a indicar el tamaño del
+const int num_lecturas =10; // van a ser la cantidad de lecturas por cada angulo para sacar el promedio, me va a indicar el tamaño del
                            // arreglo (vector) para poder sacar el promedio
 
-//double inten_ins_prom = 0; //variable donde se va a almacenar la intensidd instantanea promedio obtenida de la comparacion de intensidades en cada angulo
-//double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
+double inten_ins_prom = 0; //variable donde se va a almacenar la intensidd instantanea promedio obtenida de la comparacion de intensidades en cada angulo
+double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
                        //angulo de rotación
 
 String sustancia; //Variable para guardar el nombre de la sustancia seleccionada
@@ -72,6 +73,9 @@ void setup()
 
   //Definicnión del luces
   pinMode (ledPin , OUTPUT);
+
+  //Definicion del sonido
+  pinMode (buzzerPin,OUTPUT);
 
   //Definicipon del servomotor
   servo.attach (pinServo); //Infico que servo va a ser manejado con el pin 9 del PWM   
@@ -269,6 +273,13 @@ void loop()
     sensado();
 
     digitalWrite (ledPin, LOW);
+    digitalWrite (buzzerPin, HIGH);
+    delay (1000);
+    digitalWrite (buzzerPin, LOW);
+    Serial.print ("El valor del angulo es: ");
+    Serial.println (angulo);
+    Serial.print (" y corresponde a un valor de intensidad de: ");
+    Serial.println (inten_max);
     
     /*SACAR DELAY Y PONER FUNCIÓN SENSADO QUE HACE LO SIGUIENTE
      * Enciendo el LED
@@ -302,6 +313,8 @@ void loop()
     lcd.print(sustancia);
     lcd.setCursor(0,1);
     lcd.print ("Rot:   ");
+    lcd.setCursor (4,1);
+    lcd.print (angulo);    
     lcd.setCursor(7,1);
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
     lcd.setCursor (8,1);
@@ -446,7 +459,7 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   {
     servo.write(i); //muevo el servo al grado marcado por i
     delay (200); //para darle tiempo al ADC
-    /*inten_instant = filtro_dato (); // digo que la intensidad instantanea es el promedio tomada de 10 intensidades en un angulo determinado
+    inten_instant = filtro_dato (); // digo que la intensidad instantanea es el promedio tomada de 10 intensidades en un angulo determinado
    
     if (inten_max <= inten_instant) //comparo si la intensidad actual es mayor a la maxima
     {
@@ -455,19 +468,19 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
       angulo = i; //guardo el valor del angulo al que esta la intensidad actual que es la maxima
     }
     //delay (1000); //delay de 1 segundos para cambiar la intensidad
- */ }
+  }
 
-  Serial.print ("El valor del angulo es: ");
-  Serial.println (angulo);
-  /*Serial.print (" y corresponde a un valor de intensidad de: ");
-  Serial.println (inten_max); 
+  //Serial.print ("El valor del angulo es: ");
+  //Serial.println (angulo);
+  //Serial.print (" y corresponde a un valor de intensidad de: ");
+  //Serial.println (inten_max); 
   //Con estas ultimas 4 lineas lo que hago es decir a que angulo esta la maxima intensidad y 
   // muestro los valores correspondientes
 
-  return (angulo);*/
+  return (angulo);
 }
 
-/*int filtro_dato (){
+int filtro_dato (){
 
   int inten_muestra [num_lecturas]; // va a ser el arreglo con las intensidades instantaneas de cada angulo
   int vals_correctos = 0; //cdetermina cuantos valores son parecidos en la comparación de todos los valores
@@ -484,8 +497,8 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   {
     
     inten_muestra [i] = analogRead (A0); // guardo 10 valores en el arreglo para despues compararlos
-    Serial.print (inten_muestra[i]); //muestro el vector para ver los valores y controlar esto despues se borra
-    Serial.print (" , "); //para que haya espacios entre los valores 
+   // Serial.print (inten_muestra[i]); //muestro el vector para ver los valores y controlar esto despues se borra
+   // Serial.print (" , "); //para que haya espacios entre los valores 
   }
 
   for (int i=0; i<=10; i++)//determino el valor que voy a comparar
@@ -510,12 +523,11 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   }
 
   inten_ins_prom = total / index; //calculo el promedio
-  Serial.println (" El promedio es: ");
-  Serial.println (inten_ins_prom);
+ // Serial.println (" El promedio es: ");
+ // Serial.println (inten_ins_prom);
   
   return (inten_ins_prom);    
 }
-*/
 
 ISR (TIMER2_OVF_vect)
 {
