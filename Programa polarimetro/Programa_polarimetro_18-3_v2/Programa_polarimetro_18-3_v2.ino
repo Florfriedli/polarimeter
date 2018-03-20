@@ -2,20 +2,28 @@
 //PIN SDA va al pin A4 de arduino
 //PIN SCL va al pin A5 de arduino
 
+//CONEXION DEL SERVO
+//Cable rojo -->5v
+//Cable marron --> GND
+//Cable naranja --> pin 
+
 #include <TimerOne.h> //Libreria para poder interrumpir por Timer1
 #include <Wire.h>     //Declaración de libreria para usar modulo I2C
 #include <LiquidCrystal_I2C.h>  //Declaracion de libreria para LCD
+#include <Servo.h> //Declaración de libreria para el servomotor
 
 //CONFIGURACIÓN DEL LCD
 LiquidCrystal_I2C lcd(0x3F, 16, 2); //Ubicación de la memoria en donde esta el I2C
 
 //CONFIGURACIÓN DEL SERVOMOTOR
+Servo servo;
 
 //DEFINICIÓN DE PINES 
-const int pulsador1 = 5; //Pulsador para subir
-const int pulsador2 = 6; //Pulsador para bajar
-const int pulsador3 = 7; //Pulsador para dar OK
-const int ledPin = 8; //Pin para el LED de láser encendido 
+const int pulsador1 = 4; //Pulsador para subir
+const int pulsador2 = 7; //Pulsador para bajar
+const int pulsador3 = 8; //Pulsador para dar OK
+const int pinServo = 9; //Pin de PWM al que se conecta el Servo
+const int ledPin = 13; //Pin para el LED de láser encendido 
 
 
 //BANDERAS
@@ -28,9 +36,14 @@ int pulsador1_anterior = 0; //Variable para verificar el estado de los pulsadore
 int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
+int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
+//int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
 
+//const int num_lecturas =10; // van a ser la cantidad de lecturas por cada angulo para sacar el promedio, me va a indicar el tamaño del
                            // arreglo (vector) para poder sacar el promedio
 
+//double inten_ins_prom = 0; //variable donde se va a almacenar la intensidd instantanea promedio obtenida de la comparacion de intensidades en cada angulo
+//double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
                        //angulo de rotación
 
 String sustancia; //Variable para guardar el nombre de la sustancia seleccionada
@@ -41,8 +54,12 @@ void setup()
   Serial.begin (9600); //Defino monitor serie
   
   //Definición del Timer1
-  Timer1.initialize (500); //interrumpo el timer cada 150ms porque 50 es muy poco
-  Timer1.attachInterrupt(INT_TMR1);
+  //Timer1.initialize (500); //interrumpo el timer cada 150ms porque 50 es muy poco
+  //Timer1.attachInterrupt(INT_TMR1);
+  TCCR2A = 0x00; //timer operando en modo normal
+  TCCR2B = 0x07; //preescaler 1:1024
+  TCNT2 = 10; //cada 10 ms overflow
+  TIMSK2 = 0x01; //hablita la interrupcion por timer 2
 
   //Definición LCD
   lcd.begin(); //Se inicia la pantalla
@@ -57,7 +74,9 @@ void setup()
   pinMode (ledPin , OUTPUT);
 
   //Definicipon del servomotor
+  servo.attach (pinServo); //Infico que servo va a ser manejado con el pin 9 del PWM   
   
+  servo.write (0); //Se posiciona el servo en cero grados
 
 }
 
@@ -246,7 +265,9 @@ void loop()
 
     //Enciendo led rojo 
     digitalWrite (ledPin,HIGH);
-    delay (3000); //para que pase a la otra pantalla pero que esta se vea
+    
+    sensado();
+
     digitalWrite (ledPin, LOW);
     
     /*SACAR DELAY Y PONER FUNCIÓN SENSADO QUE HACE LO SIGUIENTE
@@ -412,8 +433,117 @@ void loop()
   }
 }
 
+int sensado () //no se si tiene que ser void o int para mi tiene que ser int porque despues voy a usar el valor del angulo
+               // para cuando lo quiera usar para mostrarlo en la pantalla
+{    
+  //Lo que hace es recorrer todos los angulos de 0° a 180° y comparar los valores de intensidad 
+  // obtenidos para determinar el valor de la intensidad mas grande. En cada comparación el 
+  // cuando da mas grande la intensidad se guarda el valor de esa intensidad y valor del angulo
 
-void INT_TMR1() //INTERRUPCION TIMER1
+  servo.write(0); //inicio el servo en 0  
+
+  for (int i= 0; i<=180; i++) //este ciclo me sirve para barrer todos los grados del servo
+  {
+    servo.write(i); //muevo el servo al grado marcado por i
+    delay (200); //para darle tiempo al ADC
+    /*inten_instant = filtro_dato (); // digo que la intensidad instantanea es el promedio tomada de 10 intensidades en un angulo determinado
+   
+    if (inten_max <= inten_instant) //comparo si la intensidad actual es mayor a la maxima
+    {
+      inten_max = inten_instant; // si es menor la intensidad maxima que la instantanea entonces
+                                 // la maxima pasa a ser la instantanea y guardo ese valor como maximo
+      angulo = i; //guardo el valor del angulo al que esta la intensidad actual que es la maxima
+    }
+    //delay (1000); //delay de 1 segundos para cambiar la intensidad
+ */ }
+
+  Serial.print ("El valor del angulo es: ");
+  Serial.println (angulo);
+  /*Serial.print (" y corresponde a un valor de intensidad de: ");
+  Serial.println (inten_max); 
+  //Con estas ultimas 4 lineas lo que hago es decir a que angulo esta la maxima intensidad y 
+  // muestro los valores correspondientes
+
+  return (angulo);*/
+}
+
+/*int filtro_dato (){
+
+  int inten_muestra [num_lecturas]; // va a ser el arreglo con las intensidades instantaneas de cada angulo
+  int vals_correctos = 0; //cdetermina cuantos valores son parecidos en la comparación de todos los valores
+  int index = 0; //es la cantidad de valores que se usan en el promedio
+  int limite = 5; // es el +-5 que tengo en cuenta para la dispersión de los valores medidos
+  int limite2 = 6; //cantidad de comparaciones correctas para que sume
+  int total = 0; //para la suma de los promedios de intensidades de muestras correctas
+  inten_ins_prom = 0;
+
+ // Serial.print ("El arreglo de intensidades de muestras es "); //para ver que este bien lo que calcule despues
+               // ESTO HAY QUE BORRARLO EN EL CODIGO FINAL     
+  
+  for (int i =0; i<=10; i++)
+  {
+    
+    inten_muestra [i] = analogRead (A0); // guardo 10 valores en el arreglo para despues compararlos
+    Serial.print (inten_muestra[i]); //muestro el vector para ver los valores y controlar esto despues se borra
+    Serial.print (" , "); //para que haya espacios entre los valores 
+  }
+
+  for (int i=0; i<=10; i++)//determino el valor que voy a comparar
+  {
+    for (int j=0; j<=10; j++) //voy a ir comparando con todos los valores
+    {
+      if (i != j) //comparo si i es distinto de j
+      {
+        if (abs (inten_muestra [i] - inten_muestra [j]) < limite) //determino si los valores estan a +- 5 datos entre si 
+        {
+          vals_correctos ++; //aumento en 1 cuando los valores con los que compara i estan a +-5 datos
+        }
+      }
+    }
+    
+    if (vals_correctos >= limite2) //si la cantidad de comparaciones similares son += a 6 entonces suma para hacer el promedio
+    {
+      total += inten_muestra [i]; //sumo los valores correctos 
+      index ++; // calculo la cantidad de valores correctos en este angulo
+    }
+    vals_correctos = 0;
+  }
+
+  inten_ins_prom = total / index; //calculo el promedio
+  Serial.println (" El promedio es: ");
+  Serial.println (inten_ins_prom);
+  
+  return (inten_ins_prom);    
+}
+*/
+
+ISR (TIMER2_OVF_vect)
+{
+  TCNT2 = 10; //registrador o reinicializador del timer2
+   //Serial.println ("interrupcion por timer cada 50ms");
+  if (flag_subir == 0 && flag_bajar == 0 && flag_ok == 0) //Verifica que no este haciendo ninguna 
+  {                                                       //acción de los pulsadores
+    if (digitalRead (pulsador1) == HIGH && pulsador1_anterior == 0) //Sube la bandera de subir para hacer las acciones correspondientes
+    {                                   //si se presiono el pulscador correspondiente, si el pulsador esta manteniendose presionado no
+        flag_subir = 1;                 //entra en este if y no manda acciones.
+    }
+    if (digitalRead (pulsador2) == HIGH && pulsador2_anterior == 0) //Sube la bandera de bajar para hacer las acciones correspondientes
+    {                                   //si se presiono el pulscador correspondiente
+        flag_bajar = 1;
+    }
+    if (digitalRead (pulsador3) == HIGH && pulsador3_anterior == 0)//Sube la bandera de OK para hacer las acciones correspondientes
+    {                                   //si se presiono el pulscador correspondiente
+        flag_ok = 1;
+    }
+  }
+  pulsador1_anterior = digitalRead (pulsador1); //para revisar el estado anterior
+  pulsador2_anterior = digitalRead (pulsador2);
+  pulsador3_anterior = digitalRead (pulsador3);
+}
+
+
+
+/*void INT_TMR1() //INTERRUPCION TIMER1
 { 
   //Serial.println ("interrupcion por timer cada 50ms");
   if (flag_subir == 0 && flag_bajar == 0 && flag_ok == 0) //Verifica que no este haciendo ninguna 
@@ -434,5 +564,5 @@ void INT_TMR1() //INTERRUPCION TIMER1
   pulsador1_anterior = digitalRead (pulsador1); //para revisar el estado anterior
   pulsador2_anterior = digitalRead (pulsador2);
   pulsador3_anterior = digitalRead (pulsador3);
-}
+}*/
 
