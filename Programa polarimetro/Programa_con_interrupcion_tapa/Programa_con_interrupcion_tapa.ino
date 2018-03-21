@@ -27,17 +27,20 @@ const int pulsador3 = 8; //Pulsador para dar OK
 const int pinServo = 9; //Pin de PWM al que se conecta el Servo
 const int ledPin = 13; //Pin para el LED de láser encendido 
 const int buzzerPin = 5; // Pin para el buzzer
+const int tapaPin = 2;
 
 
 //BANDERAS
 int flag_subir = 0; //Se definene las banderas para ver el estado del pulsador
 int flag_bajar = 0;
 int flag_ok = 0;
+int flag_tapa = 0;
 
 //DEFINICIÓN DE VARIABLES
 int pulsador1_anterior = 0; //Variable para verificar el estado de los pulsadores
 int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
+int tapa_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
 int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
 int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
@@ -57,14 +60,17 @@ void setup()
 { 
   Serial.begin (9600); //Defino monitor serie
   
-  //Definición del Timer1
-  //Timer1.initialize (500); //interrumpo el timer cada 150ms porque 50 es muy poco
-  //Timer1.attachInterrupt(INT_TMR1);
+  //Definición del Timer2
   TCCR2A = 0x00; //timer operando en modo normal
   TCCR2B = 0x07; //preescaler 1:1024
   TCNT2 = 10; //cada 10 ms overflow
   TIMSK2 = 0x01; //hablita la interrupcion por timer 2
 
+  //Definicion interrupcion externa para pulsador de tapa
+   attachInterrupt (0, CambioBanderaTapa, RISING); //Con esto configuro la interrupción externa con el 
+                                               //pulsador, "0" es porque es INT0 que es el tipo de interrupción por el pin 2, 
+                                               //CambioBandera es la funcion donde se va a cambiar la bandera y
+                                               //RISING Dispara en el flanco de subida (Cuando pasa de LOW a HIGH).
   //Definición LCD
   lcd.begin(); //Se inicia la pantalla
   lcd.backlight (); //Se enciende la luz de la pantalla
@@ -110,24 +116,28 @@ void loop()
     lcd.print ("FLEU Polarimetro");
     lcd.setCursor (0,1);
     lcd.print ("Comenzar    OK");
-    //verifico pulsador presionado
-    if (flag_subir == 1)
+
+    //Verifico que la tapa este cerrada
+    if (flag_tapa ==1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
-    }
-    else if (flag_bajar == 1)
-    {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
-    }
-    else if (flag_ok == 1)
-    {
-      estado_pantalla = 2;
-      lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      //verifico pulsador presionado
+      if (flag_subir == 1)
+      {
+        flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      }
+      else if (flag_bajar == 1)
+      {
+        flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      }
+      else if (flag_ok == 1)
+      {
+        estado_pantalla = 2;
+        lcd.clear();
+        flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      }
     }
   }
-
-  
+    
   if (estado_pantalla == 2)
   {
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
@@ -317,6 +327,7 @@ void loop()
   }
   if (estado_pantalla == 8)
   {
+    flag_tapa = 0;
     lcd.setCursor(3,0);
     lcd.print(sustancia);
     lcd.setCursor(0,1);
@@ -599,6 +610,24 @@ float temperatura ()
   return (tempC);
 }
 
+void CambioBanderaTapa() //esta es la funcion de interrupcion que cuando pulso hago el cambio de bandera
+{                         // que me selecciona el if que voy a ejecutar
+  tapa_anterior = 1;
+  flag_tapa = 1;
+}
+
+void detener_medicion()
+{
+  lcd.clear(); //Se limpia la pantalla por si quedo algo 
+  //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
+  lcd.setCursor (5,0);
+  lcd.print ("ERROR");
+  lcd.setCursor (2,1);
+  lcd.print ("Tapa abierta");
+
+  estado_pantalla = 1;
+}
+
 ISR (TIMER2_OVF_vect)
 {
   TCNT2 = 10; //registrador o reinicializador del timer2
@@ -621,30 +650,14 @@ ISR (TIMER2_OVF_vect)
   pulsador1_anterior = digitalRead (pulsador1); //para revisar el estado anterior
   pulsador2_anterior = digitalRead (pulsador2);
   pulsador3_anterior = digitalRead (pulsador3);
+  
+  if(flag_tapa == 0 && tapa_anterior == 1 && estado_pantalla == 7)
+  {
+    servo.write (0);
+    detener_medicion();
+  }
 }
 
 
 
-/*void INT_TMR1() //INTERRUPCION TIMER1
-{ 
-  //Serial.println ("interrupcion por timer cada 50ms");
-  if (flag_subir == 0 && flag_bajar == 0 && flag_ok == 0) //Verifica que no este haciendo ninguna 
-  {                                                       //acción de los pulsadores
-    if (digitalRead (pulsador1) == HIGH && pulsador1_anterior == 0) //Sube la bandera de subir para hacer las acciones correspondientes
-    {                                   //si se presiono el pulscador correspondiente, si el pulsador esta manteniendose presionado no
-        flag_subir = 1;                 //entra en este if y no manda acciones.
-    }
-    if (digitalRead (pulsador2) == HIGH && pulsador2_anterior == 0) //Sube la bandera de bajar para hacer las acciones correspondientes
-    {                                   //si se presiono el pulscador correspondiente
-        flag_bajar = 1;
-    }
-    if (digitalRead (pulsador3) == HIGH && pulsador3_anterior == 0)//Sube la bandera de OK para hacer las acciones correspondientes
-    {                                   //si se presiono el pulscador correspondiente
-        flag_ok = 1;
-    }
-  }
-  pulsador1_anterior = digitalRead (pulsador1); //para revisar el estado anterior
-  pulsador2_anterior = digitalRead (pulsador2);
-  pulsador3_anterior = digitalRead (pulsador3);
-}*/
 
