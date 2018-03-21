@@ -10,9 +10,9 @@
 // Fotcelda se conecta al A0
 //Sensor de T° se conecta al A1
 
-#include <Wire.h>     //Declaración de libreria para usar modulo I2C
+#include <Wire.h>               //Declaración de libreria para usar modulo I2C
 #include <LiquidCrystal_I2C.h>  //Declaracion de libreria para LCD
-#include <Servo.h> //Declaración de libreria para el servomotor
+#include <Servo.h>              //Declaración de libreria para el servomotor
 
 //CONFIGURACIÓN DEL LCD
 LiquidCrystal_I2C lcd(0x3F, 16, 2); //Ubicación de la memoria en donde esta el I2C
@@ -59,9 +59,7 @@ void setup()
 { 
   Serial.begin (9600); //Defino monitor serie
   
-  //Definición del Timer1
-  //Timer1.initialize (500); //interrumpo el timer cada 150ms porque 50 es muy poco
-  //Timer1.attachInterrupt(INT_TMR1);
+  //Definición del TIMER2
   TCCR2A = 0x00; //timer operando en modo normal
   TCCR2B = 0x07; //preescaler 1:1024
   TCNT2 = 10; //cada 10 ms overflow
