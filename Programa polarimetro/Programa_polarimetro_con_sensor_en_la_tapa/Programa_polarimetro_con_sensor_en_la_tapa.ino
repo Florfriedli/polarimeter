@@ -21,8 +21,8 @@ LiquidCrystal_I2C lcd(0x3F, 16, 2); //Ubicación de la memoria en donde esta el 
 Servo servo;
 
 //DEFINICIÓN DE PINES 
-const int pulsador1 = 4; //Pulsador para subir
-const int pulsador2 = 7; //Pulsador para bajar
+const int pulsador1 = 4; //Pulsador para anterior
+const int pulsador2 = 7; //Pulsador para siguiente
 const int pulsador3 = 8; //Pulsador para dar OK
 const int pinServo = 9; //Pin de PWM al que se conecta el Servo
 const int ledPin = 13; //Pin para el LED de láser encendido 
@@ -31,8 +31,8 @@ const int tapaPin = 2; //Pin para el pulsador que verifica si esta o no cerrada 
 
 
 //BANDERAS
-int flag_subir = 0; //Se definene las banderas para ver el estado del pulsador
-int flag_bajar = 0;
+int flag_anterior = 0; //Se definene las banderas para ver el estado del pulsador
+int flag_siguiente = 0;
 int flag_ok = 0;
 int flag_tapa = 0;
 
@@ -42,18 +42,19 @@ int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
 int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
-//int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
+int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
 
 const int num_lecturas =10; // van a ser la cantidad de lecturas por cada angulo para sacar el promedio, me va a indicar el tamaño del
                            // arreglo (vector) para poder sacar el promedio
 
-//double inten_ins_prom = 0; //variable donde se va a almacenar la intensidd instantanea promedio obtenida de la comparacion de intensidades en cada angulo
-//double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
+double inten_ins_prom = 0; //variable donde se va a almacenar la intensidd instantanea promedio obtenida de la comparacion de intensidades en cada angulo
+double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
                        //angulo de rotación
-float tempC; //variable en la que se almacena la T° en °celcius
+float tempC = 0; //variable en la que se almacena la T° en °celcius
 
 String sustancia; //Variable para guardar el nombre de la sustancia seleccionada
 
+//------------------------------------------------------------------------------------------------------------------------------------------
 
 void setup() 
 { 
@@ -62,8 +63,9 @@ void setup()
   //Definición del TIMER2
   TCCR2A = 0x00; //timer operando en modo normal
   TCCR2B = 0x07; //preescaler 1:1024
-  TCNT2 = 10; //cada 10 ms overflow
+  TCNT2 = 10; //cada 10 bits overflow 
   TIMSK2 = 0x01; //hablita la interrupcion por timer 2
+  //la frecuencia es de 31.88 es de 0.031s o 31.36 ms
 
   //Definición LCD
   lcd.begin(); //Se inicia la pantalla
@@ -85,8 +87,9 @@ void setup()
   servo.attach (pinServo); //Infico que servo va a ser manejado con el pin 9 del PWM   
   
   servo.write (0); //Se posiciona el servo en cero grados
-
 }
+
+//-----------------------------------------------------------------------------------------------------------------------
 
 void loop() 
 {
@@ -115,19 +118,19 @@ void loop()
     lcd.print ("Comenzar    OK");
     
     //verifico pulsador presionado
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera siguiente para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 2;
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera ok para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -144,22 +147,22 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("D-frutosa     OK");
 
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
       estado_pantalla = 3;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 6;
       sustancia = "D-fructosa";
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -175,24 +178,24 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("D-glucosa     OK");
 
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
       estado_pantalla = 2;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
       estado_pantalla = 4;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 6;
       sustancia = "D-glucosa";
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -208,24 +211,24 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("D-sacarosa    OK");
 
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
       estado_pantalla = 3;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
       estado_pantalla = 5;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 6;
       sustancia = "D-sacarosa";
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -242,22 +245,22 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("Lactosa       OK");
 
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
       estado_pantalla = 4;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 6;
       sustancia = "Lactosa";
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -276,21 +279,21 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("Otra sustancia <");
 
-    if (flag_subir == 1 && flag_tapa == 1)
+    if (flag_anterior == 1 && flag_tapa == 1)
     {
       estado_pantalla = 2;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1 && flag_tapa == 1)
+    else if (flag_siguiente == 1 && flag_tapa == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 7;
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_tapa == 0)
     {
@@ -318,7 +321,7 @@ void loop()
     Serial.print ("El valor del angulo es: "); 
     Serial.println (angulo);
     Serial.print (" y corresponde a un valor de intensidad de: ");
-    Serial.println (inten_max);*/
+    Serial.println (inten_max);
     Serial.print ("La temperatura sensada es de: ");
     Serial.println (tempC);
     
@@ -334,17 +337,17 @@ void loop()
       */
       //verifico pulsador presionado
 
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
     else if (flag_tapa == 0) //Si la tapa esta abierta pasa a otra pantalla 
     {
@@ -363,8 +366,8 @@ void loop()
     lcd.print(sustancia);
     lcd.setCursor(0,1);
     lcd.print ("Rot:   ");
- //   lcd.setCursor (4,1);
- //   lcd.print (angulo);    
+    lcd.setCursor (4,1);
+    lcd.print (angulo);    
     lcd.setCursor(7,1);
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
     lcd.setCursor (8,1);
@@ -374,19 +377,19 @@ void loop()
     lcd.setCursor (15,1);
     lcd.print ("Z");
     
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
       estado_pantalla = 9;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera siguiente para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
   if (estado_pantalla == 9)
@@ -395,21 +398,21 @@ void loop()
     lcd.print(sustancia);
     lcd.setCursor(0,1);
     lcd.print ("C:   ,  g/dl");
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
       estado_pantalla = 8;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
       estado_pantalla = 10;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
     if (estado_pantalla == 10)
@@ -422,21 +425,21 @@ void loop()
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
     lcd.setCursor (9,1);
     lcd.print ("BRIX");
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
       estado_pantalla = 9;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
       estado_pantalla = 11;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
   if (estado_pantalla == 11)
@@ -455,21 +458,21 @@ void loop()
     lcd.print(char(223));
     lcd.setCursor(9,1);
     lcd.print ("C");
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
       estado_pantalla = 10;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
       estado_pantalla = 12;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
   if (estado_pantalla == 12)
@@ -478,23 +481,23 @@ void loop()
     lcd.print("Rehacer med.  >");
     lcd.setCursor(0,1);
     lcd.print ("Inicio        OK");
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
       estado_pantalla = 11;
       lcd.clear();
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
       estado_pantalla = 6;
       lcd.clear();
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
       estado_pantalla = 1;
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
   if(estado_pantalla == 13)
@@ -504,19 +507,19 @@ void loop()
     lcd.setCursor (0,1);
     lcd.print ("Tapa cerrada  OK");
     
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 1;
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
   if(estado_pantalla == 14)
@@ -531,19 +534,19 @@ void loop()
    
         
    //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
-    if (flag_subir == 1)
+    if (flag_anterior == 1)
     {
-      flag_subir = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
-    else if (flag_bajar == 1)
+    else if (flag_siguiente == 1)
     {
-      flag_bajar = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
       estado_pantalla = 1;
       lcd.clear();
-      flag_ok = 0; //Se baja la bandera subir para poder volver a usarla
+      flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
 }
@@ -562,6 +565,8 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   {
     if (flag_tapa == 0)
     {
+      digitalWrite (ledPin, LOW);
+      //apagoel laser
       break; //Para que cuando se abra la tapa salga del for y valla a loop a la pantalla 14
     }
     servo.write(i); //muevo el servo al grado marcado por i
@@ -576,7 +581,6 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
     }
     //delay (1000); //delay de 1 segundos para cambiar la intensidad 
   }
-/*
   //Serial.print ("El valor del angulo es: ");
   //Serial.println (angulo);
   //Serial.print (" y corresponde a un valor de intensidad de: ");
@@ -584,7 +588,7 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   //Con estas ultimas 4 lineas lo que hago es decir a que angulo esta la maxima intensidad y 
   // muestro los valores correspondientes
 
-  return (angulo);*/
+  return (angulo);
 }
 
 int filtro_dato (){
@@ -699,15 +703,15 @@ ISR (TIMER2_OVF_vect)
 {
   TCNT2 = 10; //registrador o reinicializador del timer2
    //Serial.println ("interrupcion por timer cada 50ms");
-  if (flag_subir == 0 && flag_bajar == 0 && flag_ok == 0) //Verifica que no este haciendo ninguna 
+  if (flag_anterior == 0 && flag_siguiente == 0 && flag_ok == 0) //Verifica que no este haciendo ninguna 
   {                                                       //acción de los pulsadores
-    if (digitalRead (pulsador1) == HIGH && pulsador1_anterior == 0) //Sube la bandera de subir para hacer las acciones correspondientes
+    if (digitalRead (pulsador1) == HIGH && pulsador1_anterior == 0) //Sube la bandera de anterior para hacer las acciones correspondientes
     {                                   //si se presiono el pulscador correspondiente, si el pulsador esta manteniendose presionado no
-        flag_subir = 1;                 //entra en este if y no manda acciones.
+        flag_anterior = 1;                 //entra en este if y no manda acciones.
     }
-    if (digitalRead (pulsador2) == HIGH && pulsador2_anterior == 0) //Sube la bandera de bajar para hacer las acciones correspondientes
+    if (digitalRead (pulsador2) == HIGH && pulsador2_anterior == 0) //Sube la bandera de siguiente para hacer las acciones correspondientes
     {                                   //si se presiono el pulscador correspondiente
-        flag_bajar = 1;
+        flag_siguiente = 1;
     }
     if (digitalRead (pulsador3) == HIGH && pulsador3_anterior == 0)//Sube la bandera de OK para hacer las acciones correspondientes
     {                                   //si se presiono el pulscador correspondiente
@@ -730,7 +734,8 @@ ISR (TIMER2_OVF_vect)
   {
     estado_pantalla = 14;
     flag_tapa = 0;
-    digitalWrite (ledPin, LOW);
+    //digitalWrite (ledPin, LOW); LO PUSE EN EL FOR DE SERVO ANTES DE BREAK PARA VER SI AHI FUNCIONA
+    //apagoel laser
   }
 }
 
