@@ -106,6 +106,9 @@ void loop()
     delay (3000);    
     estado_pantalla = 1;
     lcd.clear();
+    flag_ok = 0; //agregue esto a ver si se para y no se pasa a la pantalla 2
+    flag_siguiente =0;
+    flag_anterior = 0;
   }
   
   servo.write (0);
