@@ -43,6 +43,16 @@ int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
 int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
+float const_Z = 2.316; //constante para poder calcular grados zacarimetros
+int grado_Z = 0;
+int long_tubo = 200; //mm de longitud del tubo de muestra del equipo
+// float rot_esp_fructosa = ;
+// float rot_esp_sacarosa = ;
+// float rot_esp_glucosa = ;
+// float rot_esp_lactosa = ;
+float concentracion = 0;
+
+
 int inten_max = 0; //Se almacena la maxima intensidad que muestra la fotocelda obtenida del ADC
 
 const int num_lecturas =10; // van a ser la cantidad de lecturas por cada angulo para sacar el promedio, me va a indicar el tamaño del
@@ -304,14 +314,29 @@ void loop()
     delay (1000);
     digitalWrite (buzzerPin, LOW);
     temperatura ();
-   /* Serial.print ("El valor del angulo es: "); 
-    Serial.println (angulo);
-    Serial.print (" y corresponde a un valor de intensidad de: ");
-    Serial.println (inten_max);
-    Serial.print ("La temperatura sensada es de: ");
-    Serial.println (tempC);*/
-    //verifico pulsador presionado
 
+//calculo grados zacarimetros    
+    grado_Z = const_Z * angulo;
+   
+//verifico sustancia seeccionada para calcular concentracion
+    if (sustancia == "Lactosa")
+    {
+      concentracion = angulo / (long_tubo /* * rot_esp_lactosa*/);
+    }
+    if (sustancia == "D-fructosa")
+    {
+      concentracion = angulo / (long_tubo /* * rot_esp_fructosa*/);
+    }
+    if (sustancia == "D-glucosa")
+    {
+      concentracion = angulo / (long_tubo /* * rot_esp_glucosa*/);
+    }
+    if (sustancia == "D-sacarosa")
+    {
+      concentracion = angulo / (long_tubo /* * rot_esp_sacarosa*/);
+    }
+
+ //verifico pulsador presionado
     if (flag_anterior == 1)
     {
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
@@ -347,7 +372,7 @@ void loop()
     lcd.setCursor(7,1);
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
     lcd.setCursor (8,1);
-    lcd.print ("   .  ");
+    lcd.print (grado_Z);
     lcd.setCursor (14,1);
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
     lcd.setCursor (15,1);
@@ -393,7 +418,7 @@ void loop()
     } 
   }
   
-    if (estado_pantalla == 10)
+  /*  if (estado_pantalla == 10)
   {
     lcd.setCursor(3,0);
     lcd.print(sustancia);
@@ -419,9 +444,9 @@ void loop()
     {
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
-  }
+  }*/
   
-  if (estado_pantalla == 11)
+  if (estado_pantalla == 10)
   {
     lcd.setCursor(3,0);
     lcd.print(sustancia);
@@ -439,7 +464,7 @@ void loop()
     lcd.print ("C");
     if (flag_anterior == 1)
     {
-      estado_pantalla = 10;
+      estado_pantalla = 9;
       lcd.clear();
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
