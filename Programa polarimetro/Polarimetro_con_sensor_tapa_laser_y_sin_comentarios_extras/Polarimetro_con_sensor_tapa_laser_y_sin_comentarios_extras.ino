@@ -62,6 +62,7 @@ double inten_ins_prom = 0; //variable donde se va a almacenar la intensidad inst
 double inten_instant = 0; //variable donde se va a guardar la intensidad promedio instantanea del angulo para verificar si es la maxima y determina con esta el 
                        //angulo de rotación
 float tempC = 0; //variable en la que se almacena la T° en °celcius
+int pinTemp = 1; //Variable del pin de entrada en el ADC para el sensor (A1)
 
 String sustancia; //Variable para guardar el nombre de la sustancia seleccionada
 
@@ -105,6 +106,7 @@ void setup()
 
 void loop() 
 {
+  servo.write (0);
   if (estado_pantalla == 0)
   {
     lcd.clear(); //Se limpia la pantalla por si quedo algo 
@@ -116,12 +118,11 @@ void loop()
     delay (3000);    
     estado_pantalla = 1;
     lcd.clear();
+    //servo.write (0);
     flag_ok = 0; //agregue esto a ver si se para y no se pasa a la pantalla 2
     flag_siguiente =0;
     flag_anterior = 0;
   }
-  
-  servo.write (0);
   
   if (estado_pantalla == 1)
   {
@@ -131,7 +132,7 @@ void loop()
     lcd.print ("FLEU Polarimetro");
     lcd.setCursor (0,1);
     lcd.print ("Comenzar    OK");
-    
+ 
     //verifico pulsador presionado
     if (flag_anterior == 1)
     {
@@ -159,6 +160,7 @@ void loop()
 
     if (flag_anterior == 1)
     {
+      estado_pantalla = 5;
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_siguiente == 1)
@@ -250,6 +252,7 @@ void loop()
     }
     else if (flag_siguiente == 1)
     {
+      estado_pantalla = 2;
       flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
@@ -283,6 +286,7 @@ void loop()
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
+      servo.write (0);
       estado_pantalla = 7;
       lcd.clear();
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
@@ -313,12 +317,13 @@ void loop()
     digitalWrite (buzzerPin, HIGH);
     delay (1000);
     digitalWrite (buzzerPin, LOW);
+    tempC = 0;
     temperatura ();
 
-//calculo grados zacarimetros    
+    //calculo grados zacarimetros    
     grado_Z = const_Z * angulo;
    
-//verifico sustancia seeccionada para calcular concentracion
+    //verifico sustancia seeccionada para calcular concentracion
     if (sustancia == "Lactosa")
     {
       concentracion = angulo / (long_tubo /* * rot_esp_lactosa*/);
@@ -336,7 +341,8 @@ void loop()
       concentracion = angulo / (long_tubo /* * rot_esp_sacarosa*/);
     }
 
- //verifico pulsador presionado
+    servo.write (0);
+    //verifico pulsador presionado
     if (flag_anterior == 1)
     {
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
@@ -366,18 +372,12 @@ void loop()
     lcd.setCursor(3,0);
     lcd.print(sustancia);
     lcd.setCursor(0,1);
-    lcd.print ("Rot:   ");
-    lcd.setCursor (4,1);
+    lcd.print ("Rot:");
+    lcd.setCursor (5,1);
     lcd.print (angulo);    
-    lcd.setCursor(7,1);
+    lcd.setCursor(9,1);
     lcd.print (char(223)); //Para que aparezca el simbolo de grado
-    lcd.setCursor (8,1);
-    lcd.print (grado_Z);
-    lcd.setCursor (14,1);
-    lcd.print (char(223)); //Para que aparezca el simbolo de grado
-    lcd.setCursor (15,1);
-    lcd.print ("Z");
-    
+       
     if (flag_anterior == 1)
     {
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
@@ -393,13 +393,20 @@ void loop()
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
   }
-  
+    
   if (estado_pantalla == 9)
   {
     lcd.setCursor(3,0);
     lcd.print(sustancia);
     lcd.setCursor(0,1);
-    lcd.print ("C:   ,  g/dl");
+    lcd.print ("Rot:");
+    lcd.setCursor (5,1);
+    lcd.print (grado_Z);
+    lcd.setCursor (11,1);
+    lcd.print (char(223)); //Para que aparezca el simbolo de grado
+    lcd.setCursor (12,1);
+    lcd.print ("Z");
+
     if (flag_anterior == 1)
     {
       estado_pantalla = 8;
@@ -418,16 +425,13 @@ void loop()
     } 
   }
   
-  /*  if (estado_pantalla == 10)
+  if (estado_pantalla == 10)
   {
     lcd.setCursor(3,0);
     lcd.print(sustancia);
     lcd.setCursor(0,1);
-    lcd.print ("C:   ,  ");
-    lcd.setCursor(8,1);
-    lcd.print (char(223)); //Para que aparezca el simbolo de grado
-    lcd.setCursor (9,1);
-    lcd.print ("BRIX");
+    lcd.print ("C:   ,  g/dl");
+    
     if (flag_anterior == 1)
     {
       estado_pantalla = 9;
@@ -444,9 +448,9 @@ void loop()
     {
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
-  }*/
+  }
   
-  if (estado_pantalla == 10)
+  if (estado_pantalla == 11)
   {
     lcd.setCursor(3,0);
     lcd.print(sustancia);
@@ -458,9 +462,9 @@ void loop()
     lcd.print (":");
     lcd.setCursor (3,1);
     lcd.print (tempC);
-    lcd.setCursor(8,1);
+    lcd.setCursor(10,1);
     lcd.print(char(223));
-    lcd.setCursor(9,1);
+    lcd.setCursor(11,1);
     lcd.print ("C");
     if (flag_anterior == 1)
     {
@@ -483,9 +487,8 @@ void loop()
   if (estado_pantalla == 12)
   {
     lcd.setCursor(0,0);
-    lcd.print("Rehacer med.  >");
-    lcd.setCursor(0,1);
-    lcd.print ("Inicio        OK");
+    lcd.print ("Menu Sust.    OK");
+    
     if (flag_anterior == 1)
     {
       estado_pantalla = 11;
@@ -494,13 +497,13 @@ void loop()
     }
     else if (flag_siguiente == 1)
     {
-      estado_pantalla = 6;
+      estado_pantalla = 8;
       lcd.clear();
       flag_siguiente = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_ok == 1)
     {
-      estado_pantalla = 1;
+      estado_pantalla = 2;
       lcd.clear();
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     } 
@@ -649,7 +652,7 @@ float temperatura ()
 
   for (int i = 0; i<=9; i++) //para que sean 10 datos i final debe ser 9 porque de 0 -9 hay de datos
   {
-    temp = analogRead (A1); //se lee el valor que da el sensor de T
+    temp = analogRead (pinTemp); //se lee el valor que da el sensor de T
     
     milivoltios = (temp/1024.0)*5000; //transformo los datos binarios a mV
     tempMV = milivoltios/10; //transformo los mV a °C
@@ -678,7 +681,6 @@ float temperatura ()
     vals_correctos = 0;
 
   }
-
   tempC = total / index;
   return (tempC);
 }
