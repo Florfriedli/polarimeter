@@ -99,14 +99,14 @@ void setup()
   //Definicipon del servomotor
   servo.attach (pinServo); //Infico que servo va a ser manejado con el pin 9 del PWM   
   
-  servo.write (0); //Se posiciona el servo en cero grados
+  //servo.write (0); //Se posiciona el servo en cero grados
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
 
 void loop() 
 {
-  servo.write (0);
+  //servo.write (0);
   if (estado_pantalla == 0)
   {
     lcd.clear(); //Se limpia la pantalla por si quedo algo 
@@ -126,7 +126,7 @@ void loop()
   
   if (estado_pantalla == 1)
   {
-   // servo.write (0);
+    //servo.write (0);
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
     lcd.setCursor (0,0);
     lcd.print ("FLEU Polarimetro");
@@ -286,7 +286,7 @@ void loop()
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
-      servo.write (0);
+     // servo.write (0);
       estado_pantalla = 7;
       lcd.clear();
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
@@ -310,7 +310,10 @@ void loop()
     
     //Enciendo led rojo 
     digitalWrite (ledPin,HIGH);  
-    digitalWrite (laserPin, HIGH);  
+    digitalWrite (laserPin, HIGH); 
+    
+    //servo.write (0); 
+    
     sensado();
     digitalWrite (laserPin, LOW);  
     digitalWrite (ledPin, LOW);
@@ -341,7 +344,8 @@ void loop()
       concentracion = angulo / (long_tubo /* * rot_esp_sacarosa*/);
     }
 
-    servo.write (0);
+    //servo.write (0);
+    
     //verifico pulsador presionado
     if (flag_anterior == 1)
     {
@@ -380,6 +384,8 @@ void loop()
        
     if (flag_anterior == 1)
     {
+      estado_pantalla = 11;
+      lcd.clear();
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
     else if (flag_siguiente == 1)
@@ -468,7 +474,7 @@ void loop()
     lcd.print ("C");
     if (flag_anterior == 1)
     {
-      estado_pantalla = 9;
+      estado_pantalla = 10;
       lcd.clear();
       flag_anterior = 0; //Se baja la bandera anterior para poder volver a usarla
     }
@@ -540,7 +546,8 @@ void loop()
     lcd.print ("Tapa cerrada  OK");
     //APAGO LASER
     digitalWrite (ledPin, LOW);
-    servo.write (0); //posiciono el servo en cero
+    
+    //servo.write (0); //posiciono el servo en cero
    
         
    //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
@@ -581,7 +588,7 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
       break; //Para que cuando se abra la tapa salga del for y valla a loop a la pantalla 14
     }
     servo.write(i); //muevo el servo al grado marcado por i
-    delay (1000); //para darle tiempo al ADC
+    delay (500); //para darle tiempo al ADC
     inten_instant = filtro_dato (); // digo que la intensidad instantanea es el promedio tomada de 10 intensidades en un angulo determinado
    
     if (inten_max <= inten_instant) //comparo si la intensidad actual es mayor a la maxima
@@ -723,7 +730,3 @@ ISR (TIMER2_OVF_vect)
     flag_tapa = 0;
   }
 }
-
-
-
-
