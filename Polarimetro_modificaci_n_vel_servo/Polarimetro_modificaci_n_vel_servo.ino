@@ -36,6 +36,7 @@ int flag_anterior = 0; //Se definene las banderas para ver el estado del pulsado
 int flag_siguiente = 0;
 int flag_ok = 0;
 int flag_tapa = 0;
+int flag_finsensado = 0;
 
 //DEFINICIÓN DE VARIABLES
 int pulsador1_anterior = 0; //Variable para verificar el estado de los pulsadores
@@ -43,6 +44,8 @@ int pulsador2_anterior = 0;
 int pulsador3_anterior = 0;
 int estado_pantalla = 0; //variable que determina la pantalla a usarse
 int angulo = 0; // variable en la que se va a guardar el valor del angulo que va a tener el polaroid
+int pos_servo = 0; //variable usada para mover lentamente el servo a 90 grados
+int servo_i = 0;
 float const_Z = 2.316; //constante para poder calcular grados zacarimetros
 int grado_Z = 0;
 int long_tubo = 200; //mm de longitud del tubo de muestra del equipo
@@ -99,15 +102,14 @@ void setup()
   //Definicipon del servomotor
   servo.attach (pinServo); //Infico que servo va a ser manejado con el pin 9 del PWM   
   
-  servo.write (90); //Se posiciona el servo en cero grados
+  servo.write (posicion_Servo()); //Se posiciona el servo en cero grados
 }
 
 //-----------------------------------------------------------------------------------------------------------------------
 
 void loop() 
 {
-  //servo.write (0);
-  if (estado_pantalla == 0)
+    if (estado_pantalla == 0)
   {
     lcd.clear(); //Se limpia la pantalla por si quedo algo 
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
@@ -118,15 +120,14 @@ void loop()
     delay (3000);    
     estado_pantalla = 1;
     lcd.clear();
-    //servo.write (0);
     flag_ok = 0; //agregue esto a ver si se para y no se pasa a la pantalla 2
     flag_siguiente =0;
     flag_anterior = 0;
+    flag_finsensado = 0;
   }
   
   if (estado_pantalla == 1)
   {
-    //servo.write (0);
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
     lcd.setCursor (0,0);
     lcd.print ("FLEU Polarimetro");
@@ -286,8 +287,9 @@ void loop()
     }
     else if (flag_ok == 1 && flag_tapa == 1)
     {
-     // servo.write (0);
       estado_pantalla = 7;
+      angulo = 0; //pongo en cero las variables necesarias para la medición
+      inten_ins_prom = 0; //pongo en cero las variables necesarias para la medición
       lcd.clear();
       flag_ok = 0; //Se baja la bandera anterior para poder volver a usarla
     }
@@ -301,6 +303,7 @@ void loop()
   
   if (estado_pantalla == 7)
   {
+    angulo = 0;
     lcd.clear(); //Se limpia la pantalla por si quedo algo 
     //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
     lcd.setCursor (1,0);
@@ -311,17 +314,21 @@ void loop()
     //Enciendo led rojo 
     digitalWrite (ledPin,HIGH);  
     digitalWrite (laserPin, HIGH); 
-    
-    //servo.write (0); 
+
+    flag_finsensado = 1; //levanto la bandera de sensado porque voy a iniciarlo y no quiero que me posicione el servo
     
     sensado();
+    
     digitalWrite (laserPin, LOW);  
     digitalWrite (ledPin, LOW);
     digitalWrite (buzzerPin, HIGH);
     delay (1000);
     digitalWrite (buzzerPin, LOW);
+
     tempC = 0;
     temperatura ();
+
+    flag_finsensado = 0;
 
     //calculo grados zacarimetros    
     grado_Z = const_Z * angulo;
@@ -344,8 +351,6 @@ void loop()
       concentracion = angulo / (long_tubo /* * rot_esp_sacarosa*/);
     }
 
-    //servo.write (0);
-    
     //verifico pulsador presionado
     if (flag_anterior == 1)
     {
@@ -369,6 +374,7 @@ void loop()
       estado_pantalla = 8;
       lcd.clear();
     }
+    servo.write(posicion_Servo());
   }
   
   if (estado_pantalla == 8)
@@ -547,9 +553,6 @@ void loop()
     //APAGO LASER
     digitalWrite (ledPin, LOW);
     
-    //servo.write (0); //posiciono el servo en cero
-   
-        
    //Se va a escribir la pantalla 1 y se va a pasar a pantalla 2
     if (flag_anterior == 1)
     {
@@ -574,6 +577,20 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
   //Lo que hace es recorrer todos los angulos de 0° a 180° y comparar los valores de intensidad 
   // obtenidos para determinar el valor de la intensidad mas grande. En cada comparación el 
   // cuando da mas grande la intensidad se guarda el valor de esa intensidad y valor del angulo
+
+  if (pos_servo =! 0)
+  {
+    for (int i = pos_servo; i = 0; i--)
+    {
+      servo.write (i-5);
+      delay (500);
+    }
+  }
+  
+  flag_finsensado = 1;
+//pongo en cero las variables usadas en la medición
+  inten_max = 0;
+  inten_instant = 0;
   angulo = 0;
   
   servo.write(0); //inicio el servo en 0  
@@ -584,7 +601,7 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
     {
       //digitalWrite (laserPin, LOW);  
       digitalWrite (ledPin, LOW);
-      //apagoel laser
+      //apago el laser
       break; //Para que cuando se abra la tapa salga del for y valla a loop a la pantalla 14
     }
     servo.write(i); //muevo el servo al grado marcado por i
@@ -596,8 +613,10 @@ int sensado () //no se si tiene que ser void o int para mi tiene que ser int por
       inten_max = inten_instant; // si es menor la intensidad maxima que la instantanea entonces
                                  // la maxima pasa a ser la instantanea y guardo ese valor como maximo
       angulo = i; //guardo el valor del angulo al que esta la intensidad actual que es la maxima
+      
     }
     //delay (1000); //delay de 1 segundos para cambiar la intensidad 
+    pos_servo = i;
   }
    return (angulo);
 }
@@ -692,6 +711,31 @@ float temperatura ()
   return (tempC);
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+int posicion_Servo()
+{
+  if (pos_servo <90)
+  {
+    for (int i = pos_servo; i <= 90; i++)
+    {
+      servo_i = i + 5;
+      servo.write (servo_i);
+      delay (500);
+    }
+  }
+   if (pos_servo > 90)
+  {
+    for (int i = pos_servo; i <= 90; i--)
+    {
+      servo_i = i - 5;
+      servo.write (servo_i);
+      delay (500);
+    }
+  }
+  return (servo_i);
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
 ISR (TIMER2_OVF_vect)
 {
   TCNT2 = 10; //registrador o reinicializador del timer2
@@ -728,5 +772,10 @@ ISR (TIMER2_OVF_vect)
     digitalWrite (laserPin, LOW);  
     estado_pantalla = 14;
     flag_tapa = 0;
+  }
+
+  if (flag_finsensado == 0) // basicamente lo que se hace es posicionar cuando se interrumpe y la bandera está en cero
+  {
+    servo.write (90);
   }
 }
